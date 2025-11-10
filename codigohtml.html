@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Para a Tárcila</title>
+    <!-- Carrega o Tailwind CSS para estilização moderna e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Define a fonte padrão Inter */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #fce7f3; /* Rosa muito claro */
+            cursor: default;
+        }
+        
+        /* Estilo customizado para o coração (emoji) */
+        .heart {
+            position: absolute;
+            font-size: 2.5rem; /* Tamanho do coração */
+            cursor: pointer;
+            user-select: none;
+            transition: transform 0.1s ease-out, opacity 0.2s ease-out;
+            /* Animação para dar um 'pulsar' */
+            animation: float-up 5s infinite linear;
+            text-shadow: 0 0 8px rgba(255, 105, 180, 0.5); /* Sombra suave */
+        }
+
+        /* Efeito ao clicar no coração */
+        .heart:active {
+            transform: scale(0.8);
+        }
+
+        /* Keyframe para a animação de flutuar */
+        @keyframes float-up {
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            50% { transform: translateY(-15px) scale(1.05); }
+            100% { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        /* Estilo para a área de jogo */
+        #game-area {
+            position: relative;
+            /* Altura fixa para ser clicável */
+            min-height: 70vh; 
+        }
+
+        /* Estilo da mensagem final */
+        #message-overlay {
+            backdrop-filter: blur(8px);
+            background-color: rgba(253, 230, 245, 0.95); /* Rosa claro transparente */
+            z-index: 50;
+        }
+
+        /* Efeito de confete para a mensagem final */
+        @keyframes confetti-fall {
+            0% { transform: translateY(-100vh); opacity: 0; }
+            100% { transform: translateY(0); opacity: 1; }
+        }
+
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #ff69b4; /* Pink */
+            border-radius: 50%;
+            animation: confetti-fall 2s ease-out forwards;
+        }
+        
+        .c-red { background-color: #ff3864; }
+        .c-pink { background-color: #ff69b4; }
+        .c-white { background-color: #ffffff; }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-4">
+
+    <!-- Área Principal do Jogo -->
+    <div id="game-container" class="w-full max-w-2xl bg-white shadow-2xl rounded-xl p-6 md:p-8 text-center border-4 border-pink-300">
+        
+        <h1 class="text-3xl md:text-4xl font-extrabold text-pink-600 mb-2">Jogo do Amor!</h1>
+        <p class="text-gray-500 mb-6">Clique nos corações que aparecerem para estourá-los!</p>
+
+        <!-- Display do Placar -->
+        <div class="mb-4 text-2xl font-bold text-red-500">
+            Corações Estourados: <span id="score-display">0</span> / 7
+        </div>
+
+        <!-- Área onde os corações vão aparecer -->
+        <div id="game-area" class="w-full bg-pink-50 rounded-lg overflow-hidden border-2 border-pink-200">
+            <!-- Os corações são inseridos aqui pelo JavaScript -->
+            <div id="heart-container" class="relative w-full h-full min-h-[400px]">
+                <!-- Corações gerados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensagem Final de Vitória (Inicialmente Oculta) -->
+    <div id="message-overlay" class="absolute inset-0 flex flex-col items-center justify-center hidden">
+        <div class="bg-white p-10 md:p-16 rounded-3xl shadow-2xl border-8 border-pink-500 text-center transform scale-100 animate-pulse">
+            <h2 class="text-5xl md:text-6xl font-black text-pink-700 mb-4">
+                VOCÊ CONSEGUIU! ❤️
+            </h2>
+            <p class="text-3xl md:text-4xl font-extrabold text-red-600">
+                Tárcila eu te amo para toda vida!
+            </p>
+            <button onclick="window.location.reload()" class="mt-8 px-6 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-full transition duration-300 shadow-lg transform hover:scale-105">
+                Jogar Novamente
+            </button>
+        </div>
+    </div>
+
+<script>
+    // Configurações e Variáveis do Jogo
+    const heartContainer = document.getElementById('heart-container');
+    const scoreDisplay = document.getElementById('score-display');
+    const messageOverlay = document.getElementById('message-overlay');
+    
+    let score = 0;
+    const targetScore = 7;
+    const heartCreationInterval = 1200; // Cria um novo coração a cada 1.2s
+
+    // Variável para armazenar o intervalo de criação
+    let gameInterval;
+    
+    // Lista de emojis de corações para variedade
+    const heartEmojis = ['💖', '💕', '💘', '💗', '💓', '💞'];
+
+    /**
+     * Gera um número inteiro aleatório entre min e max (inclusive).
+     * @param {number} min 
+     * @param {number} max 
+     */
+    const getRandomNumber = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    /**
+     * Cria e adiciona um coração na área de jogo em uma posição aleatória.
+     */
+    function createHeart() {
+        if (score >= targetScore) return; // Não cria se o jogo acabou
+
+        const heart = document.createElement('div');
+        heart.textContent = heartEmojis[getRandomNumber(0, heartEmojis.length - 1)];
+        heart.classList.add('heart');
+
+        // Calcula as dimensões do container para posicionar o coração
+        const containerWidth = heartContainer.clientWidth;
+        const containerHeight = heartContainer.clientHeight;
+
+        // O coração tem aproximadamente 40px (2.5rem). 
+        // Subtrai para não sair da borda.
+        const maxLeft = containerWidth - 40;
+        const maxTop = containerHeight - 40;
+        
+        // Garante que o coração é grande o suficiente para aparecer
+        if (maxLeft <= 0 || maxTop <= 0) return; 
+
+        heart.style.left = `${getRandomNumber(10, maxLeft)}px`;
+        heart.style.top = `${getRandomNumber(10, maxTop)}px`;
+        
+        heart.onclick = handleHeartClick;
+        
+        heartContainer.appendChild(heart);
+    }
+
+    /**
+     * Lida com o clique no coração.
+     * @param {MouseEvent} event 
+     */
+    function handleHeartClick(event) {
+        if (score >= targetScore) return;
+
+        const heart = event.target;
+        // Inicia a animação de "estouro"
+        heart.style.transform = 'scale(2.5)';
+        heart.style.opacity = '0';
+        heart.style.transition = 'transform 0.3s ease-out, opacity 0.3s ease-out';
+        heart.onclick = null; // Impede cliques duplicados
+
+        score++;
+        scoreDisplay.textContent = score;
+
+        // Remove o elemento após a animação de estouro
+        setTimeout(() => {
+            if (heart.parentNode) {
+                heart.parentNode.removeChild(heart);
+            }
+        }, 300);
+
+        // Verifica a condição de vitória
+        if (score >= targetScore) {
+            endGame();
+        }
+    }
+
+    /**
+     * Finaliza o jogo e mostra a mensagem romântica.
+     */
+    function endGame() {
+        // Para de criar novos corações
+        clearInterval(gameInterval);
+
+        // Remove todos os corações restantes na tela
+        document.querySelectorAll('.heart').forEach(h => {
+            h.style.opacity = '0';
+            setTimeout(() => h.remove(), 500);
+        });
+
+        // Mostra a mensagem final com um pequeno delay
+        setTimeout(() => {
+            messageOverlay.classList.remove('hidden');
+            createConfetti(50); // Adiciona confetes!
+        }, 500);
+    }
+
+    /**
+     * Cria um efeito visual de confetes.
+     * @param {number} count 
+     */
+    function createConfetti(count) {
+        for (let i = 0; i < count; i++) {
+            const confetti = document.createElement('div');
+            confetti.classList.add('confetti');
+            
+            // Adiciona variação de cor
+            const colors = ['c-red', 'c-pink', 'c-white'];
+            confetti.classList.add(colors[getRandomNumber(0, colors.length - 1)]);
+
+            // Posição e atraso aleatórios
+            confetti.style.left = `${Math.random() * 100}vw`;
+            confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+            confetti.style.animationDuration = `${getRandomNumber(15, 30) / 10}s`;
+            confetti.style.opacity = '0'; 
+
+            messageOverlay.appendChild(confetti);
+
+             // Define a opacidade para 1 após o delay de animação
+            setTimeout(() => confetti.style.opacity = '1', 50);
+        }
+    }
+
+    /**
+     * Inicia o loop principal do jogo.
+     */
+    function initializeGame() {
+        // Cria alguns corações iniciais para começar
+        createHeart();
+        createHeart();
+        createHeart();
+
+        // Configura o loop principal
+        gameInterval = setInterval(createHeart, heartCreationInterval);
+        
+        // Recalcula o posicionamento em caso de redimensionamento da tela
+        window.addEventListener('resize', () => {
+             // Limpa e recria para resetar as posições
+             document.querySelectorAll('.heart').forEach(h => h.remove());
+             for(let i = 0; i < score; i++) {
+                createHeart();
+             }
+        });
+    }
+
+    // Inicia o jogo quando a página estiver totalmente carregada
+    window.onload = initializeGame;
+</script>
+</body>
+</html>
